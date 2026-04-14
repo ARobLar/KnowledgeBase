@@ -19,6 +19,9 @@ const actionColors: Record<string, string> = {
   APPEND_FILE: "bg-green-500/10 text-green-400 border-green-500/20",
   READ_FILE: "bg-sky-500/10 text-sky-400 border-sky-500/20",
   QUERY: "bg-teal-500/10 text-teal-400 border-teal-500/20",
+  GITHUB_CREATE_REPO: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  GITHUB_PUSH_FILE: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  GITHUB_CREATE_BRANCH: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   ASK_USER_TO_CLARIFY: "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
@@ -29,6 +32,9 @@ const actionLabels: Record<string, string> = {
   APPEND_FILE: "Append to File",
   READ_FILE: "Read File",
   QUERY: "Query",
+  GITHUB_CREATE_REPO: "GitHub: Create Repo",
+  GITHUB_PUSH_FILE: "GitHub: Push File",
+  GITHUB_CREATE_BRANCH: "GitHub: Create Branch",
   ASK_USER_TO_CLARIFY: "Need Clarification",
 };
 

@@ -43,6 +43,14 @@ Default subfolders:
 - "create a folder", "make a folder", "new folder" → CREATE_FOLDER
 - folderPath: the full path like "KnowledgeBase/new-folder-name"
 
+### GitHub operations
+- "create a repo", "new github repo", "create a github project" → GITHUB_CREATE_REPO, githubRepo: the repo name
+- "push to github", "push this file to github", "commit to github" → GITHUB_PUSH_FILE
+- "create a branch", "new branch" → GITHUB_CREATE_BRANCH
+- For GitHub intents: set githubRepo, githubBranch, githubOwner, githubDescription, githubPrivate, githubFilePath, githubCommitMessage as applicable
+- If repo name not specified, use the title or a slugified version of the content
+- githubPrivate defaults to true unless user says "public"
+
 ### Reading and querying
 - "what recipes do I have", "list my recipes", "show me what's in recipes" → QUERY, folder: "recipes"
 - "what's in my [folder]", "list [folder]", "show me [folder]" → QUERY, folder: the named folder
@@ -69,7 +77,7 @@ When generating markdownContent:
 Return ONLY valid JSON matching this exact schema (no markdown, no explanation, just JSON):
 
 {
-  "intent": "CREATE_FOLDER" | "CREATE_FILE" | "EDIT_FILE" | "APPEND_FILE" | "READ_FILE" | "QUERY" | "ASK_USER_TO_CLARIFY",
+  "intent": "CREATE_FOLDER" | "CREATE_FILE" | "EDIT_FILE" | "APPEND_FILE" | "READ_FILE" | "QUERY" | "GITHUB_CREATE_REPO" | "GITHUB_PUSH_FILE" | "GITHUB_CREATE_BRANCH" | "ASK_USER_TO_CLARIFY",
   "folder": string | null,           // top-level folder name, e.g. "recipes"
   "folderPath": string | null,       // full path e.g. "KnowledgeBase/recipes" or "KnowledgeBase/new-folder"
   "fileName": string | null,         // e.g. "chicken-parmesan.md"
@@ -81,7 +89,14 @@ Return ONLY valid JSON matching this exact schema (no markdown, no explanation, 
   "confidence": number,              // 0.0 to 1.0
   "needsClarification": boolean,
   "clarificationQuestion": string | null,
-  "reasoningSummary": string         // brief explanation of your decision
+  "reasoningSummary": string,         // brief explanation of your decision
+  "githubRepo": string | null,        // repo name for GitHub operations
+  "githubBranch": string | null,      // branch name
+  "githubOwner": string | null,       // GitHub username/org (null = authenticated user)
+  "githubDescription": string | null, // repo description
+  "githubPrivate": boolean,           // true = private repo (default)
+  "githubFilePath": string | null,    // file path within repo
+  "githubCommitMessage": string | null // commit message
 }
 
 ## Examples

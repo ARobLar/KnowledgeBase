@@ -16,16 +16,18 @@ import {
 } from "../drive/drive-service";
 import { formatContent } from "../markdown/markdown-service";
 import { answerFromContent } from "../anthropic/anthropic-service";
+import { createRepo, createBranch, pushFile, getAuthenticatedUser } from "../github/github-service";
 
 export interface DecisionContext {
   intent: KBIntent;
   accessToken: string;
+  githubToken?: string;
 }
 
 export async function executeDecision(
   ctx: DecisionContext
 ): Promise<OperationResult> {
-  const { intent, accessToken } = ctx;
+  const { intent, accessToken, githubToken } = ctx;
 
   // Always clarify if needed
   if (intent.needsClarification || intent.intent === "ASK_USER_TO_CLARIFY") {
@@ -55,6 +57,20 @@ export async function executeDecision(
         return await handleReadFile(intent, accessToken);
       case "QUERY":
         return await handleQuery(intent, accessToken);
+      case "GITHUB_CREATE_REPO":
+      case "GITHUB_PUSH_FILE":
+      case "GITHUB_CREATE_BRANCH":
+        if (!githubToken) {
+          return {
+            success: false,
+            action: intent.intent,
+            path: null,
+            driveFileId: null,
+            driveUrl: null,
+            message: "GitHub is not connected. Go to Settings to add your GitHub token.",
+          };
+        }
+        return await handleGitHub(intent, githubToken);
       default:
         return {
           success: false,
@@ -302,6 +318,66 @@ async function handleReadFile(
     driveUrl: file.webViewLink ?? null,
     message: answer,
   };
+}
+
+async function handleGitHub(
+  intent: KBIntent,
+  githubToken: string
+): Promise<OperationResult> {
+  const user = await getAuthenticatedUser(githubToken);
+  const owner = intent.githubOwner ?? user.login;
+
+  if (intent.intent === "GITHUB_CREATE_REPO") {
+    const repoName = intent.githubRepo ?? slugify(intent.title ?? "new-repo");
+    const repo = await createRepo(
+      githubToken,
+      repoName,
+      intent.githubDescription ?? "",
+      intent.githubPrivate ?? true
+    );
+    return {
+      success: true,
+      action: "GITHUB_CREATE_REPO",
+      path: repo.full_name,
+      driveFileId: null,
+      driveUrl: repo.html_url,
+      message: `Created ${repo.private ? "private" : "public"} repo "${repo.full_name}" on GitHub.`,
+    };
+  }
+
+  if (intent.intent === "GITHUB_CREATE_BRANCH") {
+    const repo = intent.githubRepo!;
+    const branch = intent.githubBranch ?? "feature/new-branch";
+    const fromBranch = "main";
+    await createBranch(githubToken, owner, repo, branch, fromBranch);
+    return {
+      success: true,
+      action: "GITHUB_CREATE_BRANCH",
+      path: `${owner}/${repo}@${branch}`,
+      driveFileId: null,
+      driveUrl: `https://github.com/${owner}/${repo}/tree/${branch}`,
+      message: `Created branch "${branch}" on ${owner}/${repo}.`,
+    };
+  }
+
+  if (intent.intent === "GITHUB_PUSH_FILE") {
+    const repo = intent.githubRepo!;
+    const filePath = intent.githubFilePath ?? intent.fileName ?? "README.md";
+    const content = intent.markdownContent ?? intent.githubCommitMessage ?? "";
+    const branch = intent.githubBranch ?? "main";
+    const commitMsg = intent.githubCommitMessage ?? `Add ${filePath} via KnowledgeBase`;
+    const file = await pushFile(githubToken, owner, repo, filePath, content, commitMsg, branch);
+    return {
+      success: true,
+      action: "GITHUB_PUSH_FILE",
+      path: `${owner}/${repo}/${filePath}`,
+      driveFileId: null,
+      driveUrl: file.html_url,
+      message: `Pushed "${filePath}" to ${owner}/${repo} on branch ${branch}.`,
+    };
+  }
+
+  return { success: false, action: intent.intent, path: null, driveFileId: null, driveUrl: null, message: "Unknown GitHub action" };
 }
 
 async function handleQuery(

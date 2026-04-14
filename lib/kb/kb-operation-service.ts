@@ -4,7 +4,8 @@ import { KBIntent, OperationResult, ProcessRequest, ProcessResponse } from "@/ty
 
 export async function processKBRequest(
   request: ProcessRequest,
-  accessToken: string
+  accessToken: string,
+  githubToken?: string
 ): Promise<ProcessResponse> {
   const { text, inputType, confirmed, pendingIntent } = request;
 
@@ -13,6 +14,7 @@ export async function processKBRequest(
     const result = await executeDecision({
       intent: pendingIntent,
       accessToken,
+      githubToken,
     });
     return {
       intent: pendingIntent,
@@ -71,7 +73,7 @@ export async function processKBRequest(
   }
 
   // Execute immediately
-  const result = await executeDecision({ intent, accessToken });
+  const result = await executeDecision({ intent, accessToken, githubToken });
   return {
     intent,
     result,

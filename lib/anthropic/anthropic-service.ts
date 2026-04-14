@@ -16,6 +16,9 @@ const KBIntentSchema = z.object({
     "APPEND_FILE",
     "READ_FILE",
     "QUERY",
+    "GITHUB_CREATE_REPO",
+    "GITHUB_PUSH_FILE",
+    "GITHUB_CREATE_BRANCH",
     "ASK_USER_TO_CLARIFY",
   ]),
   folder: z.string().nullable(),
@@ -38,6 +41,13 @@ const KBIntentSchema = z.object({
   needsClarification: z.boolean(),
   clarificationQuestion: z.string().nullable(),
   reasoningSummary: z.string(),
+  githubRepo: z.string().nullable().optional().default(null),
+  githubBranch: z.string().nullable().optional().default(null),
+  githubOwner: z.string().nullable().optional().default(null),
+  githubDescription: z.string().nullable().optional().default(null),
+  githubPrivate: z.boolean().optional().default(true),
+  githubFilePath: z.string().nullable().optional().default(null),
+  githubCommitMessage: z.string().nullable().optional().default(null),
 });
 
 function extractJson(text: string): string {

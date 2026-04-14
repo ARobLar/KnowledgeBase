@@ -5,6 +5,9 @@ export type KBAction =
   | "APPEND_FILE"
   | "READ_FILE"
   | "QUERY"
+  | "GITHUB_CREATE_REPO"
+  | "GITHUB_PUSH_FILE"
+  | "GITHUB_CREATE_BRANCH"
   | "ASK_USER_TO_CLARIFY";
 
 export type ContentType =
@@ -30,6 +33,14 @@ export interface KBIntent {
   needsClarification: boolean;
   clarificationQuestion: string | null;
   reasoningSummary: string;
+  // GitHub fields
+  githubRepo: string | null;
+  githubBranch: string | null;
+  githubOwner: string | null;
+  githubDescription: string | null;
+  githubPrivate: boolean;
+  githubFilePath: string | null;
+  githubCommitMessage: string | null;
 }
 
 export interface OperationResult {

@@ -34,10 +34,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const githubToken = req.headers.get("x-github-token") ?? undefined;
+
   try {
     const result: ProcessResponse = await processKBRequest(
       body,
-      session.accessToken
+      session.accessToken,
+      githubToken
     );
     return NextResponse.json(result);
   } catch (error) {
