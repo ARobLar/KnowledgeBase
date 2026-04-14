@@ -43,6 +43,13 @@ export async function processKBRequest(
       needsClarification: true,
       clarificationQuestion: "I had trouble understanding that. Could you rephrase?",
       reasoningSummary: `Error interpreting input: ${error instanceof Error ? error.message : String(error)}`,
+      githubRepo: null,
+      githubBranch: null,
+      githubOwner: null,
+      githubDescription: null,
+      githubPrivate: true,
+      githubFilePath: null,
+      githubCommitMessage: null,
     };
     return {
       intent: fallbackIntent,
