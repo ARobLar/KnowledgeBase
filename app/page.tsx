@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { AuthButton } from "@/components/AuthButton";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
@@ -10,6 +11,15 @@ import { ActivityFeed } from "@/components/ActivityFeed";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
 import { useTTS } from "@/hooks/useTTS";
+
+const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME;
+const formattedBuild = BUILD_TIME
+  ? new Date(BUILD_TIME).toLocaleString("sv-SE", {
+      timeZone: "Europe/Stockholm",
+      dateStyle: "short",
+      timeStyle: "short",
+    })
+  : null;
 
 type InputTab = "voice" | "text";
 
@@ -78,7 +88,17 @@ export default function Home() {
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">🧠</span>
-            <h1 className="text-base font-bold text-text">KnowledgeBase</h1>
+            <div>
+              <h1 className="text-base font-bold text-text leading-tight">KnowledgeBase</h1>
+              {formattedBuild && (
+                <Link
+                  href="/patches"
+                  className="text-xs text-text-muted hover:text-accent transition-colors leading-tight"
+                >
+                  Deployed {formattedBuild}
+                </Link>
+              )}
+            </div>
           </div>
           <AuthButton />
         </div>
