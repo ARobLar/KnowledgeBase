@@ -17,6 +17,8 @@ const actionColors: Record<string, string> = {
   CREATE_FOLDER: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   EDIT_FILE: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   APPEND_FILE: "bg-green-500/10 text-green-400 border-green-500/20",
+  READ_FILE: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  QUERY: "bg-teal-500/10 text-teal-400 border-teal-500/20",
   ASK_USER_TO_CLARIFY: "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
@@ -25,6 +27,8 @@ const actionLabels: Record<string, string> = {
   CREATE_FOLDER: "Create Folder",
   EDIT_FILE: "Edit File",
   APPEND_FILE: "Append to File",
+  READ_FILE: "Read File",
+  QUERY: "Query",
   ASK_USER_TO_CLARIFY: "Need Clarification",
 };
 

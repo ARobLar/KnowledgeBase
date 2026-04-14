@@ -18,6 +18,8 @@ Default subfolders:
 - CREATE_FILE: user wants to create a new markdown file with content
 - EDIT_FILE: user wants to replace content in an existing file
 - APPEND_FILE: user wants to add content to an existing file (preferred for updates to existing docs)
+- READ_FILE: user wants to read, view, or ask a question about a specific file
+- QUERY: user wants to list what files exist in a folder, or ask a general question across multiple files
 - ASK_USER_TO_CLARIFY: intent is ambiguous or you need more information
 
 ## Routing Rules (follow these exactly)
@@ -41,6 +43,14 @@ Default subfolders:
 - "create a folder", "make a folder", "new folder" → CREATE_FOLDER
 - folderPath: the full path like "KnowledgeBase/new-folder-name"
 
+### Reading and querying
+- "what recipes do I have", "list my recipes", "show me what's in recipes" → QUERY, folder: "recipes"
+- "what's in my [folder]", "list [folder]", "show me [folder]" → QUERY, folder: the named folder
+- "show me my [recipe/document]", "read my [file]", "what does my [file] say" → READ_FILE, folder + fileName/targetDocument
+- "how do I make [dish]", "what are the ingredients for [dish]" → READ_FILE, folder: "recipes", targetDocument: kebab-case dish name + ".md"
+- "what are my values", "show my soul doc", "read my identity" → READ_FILE, folder: "identity", targetDocument: "RobinSoulMD.md"
+- For QUERY and READ_FILE: markdownContent should be null (you are reading, not writing)
+
 ### Clarification threshold
 - If confidence < 0.7, set needsClarification: true and provide a clear clarificationQuestion
 - If the user message is completely unrelated to knowledge base operations, ask for clarification
@@ -59,7 +69,7 @@ When generating markdownContent:
 Return ONLY valid JSON matching this exact schema (no markdown, no explanation, just JSON):
 
 {
-  "intent": "CREATE_FOLDER" | "CREATE_FILE" | "EDIT_FILE" | "APPEND_FILE" | "ASK_USER_TO_CLARIFY",
+  "intent": "CREATE_FOLDER" | "CREATE_FILE" | "EDIT_FILE" | "APPEND_FILE" | "READ_FILE" | "QUERY" | "ASK_USER_TO_CLARIFY",
   "folder": string | null,           // top-level folder name, e.g. "recipes"
   "folderPath": string | null,       // full path e.g. "KnowledgeBase/recipes" or "KnowledgeBase/new-folder"
   "fileName": string | null,         // e.g. "chicken-parmesan.md"

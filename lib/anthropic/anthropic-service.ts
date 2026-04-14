@@ -14,6 +14,8 @@ const KBIntentSchema = z.object({
     "CREATE_FILE",
     "EDIT_FILE",
     "APPEND_FILE",
+    "READ_FILE",
+    "QUERY",
     "ASK_USER_TO_CLARIFY",
   ]),
   folder: z.string().nullable(),
@@ -83,6 +85,31 @@ async function callClaude(
   }
 
   return textBlock.text;
+}
+
+export async function answerFromContent(
+  question: string,
+  files: { name: string; content: string }[]
+): Promise<string> {
+  const filesText = files
+    .map((f) => `### ${f.name}\n${f.content}`)
+    .join("\n\n---\n\n");
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-6",
+    max_tokens: 1024,
+    system:
+      "You are a helpful personal knowledge assistant. Answer the user's question concisely based only on the provided file contents. Speak naturally, as if talking to a friend. Keep answers brief and conversational — ideal for being read aloud.",
+    messages: [
+      {
+        role: "user",
+        content: `My question: ${question}\n\nMy files:\n\n${filesText}`,
+      },
+    ],
+  });
+
+  const textBlock = response.content.find((b) => b.type === "text");
+  return textBlock?.type === "text" ? textBlock.text : "I couldn't find an answer in your files.";
 }
 
 export async function interpretIntent(userInput: string): Promise<KBIntent> {

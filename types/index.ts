@@ -3,6 +3,8 @@ export type KBAction =
   | "CREATE_FILE"
   | "EDIT_FILE"
   | "APPEND_FILE"
+  | "READ_FILE"
+  | "QUERY"
   | "ASK_USER_TO_CLARIFY";
 
 export type ContentType =

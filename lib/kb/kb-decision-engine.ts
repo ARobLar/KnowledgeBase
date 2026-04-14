@@ -6,12 +6,16 @@ import {
 } from "../drive/drive-path-resolver";
 import {
   findFilesByName,
+  findFileByName,
   createFolder,
   createFile,
   updateFile,
   appendToFile,
+  listFiles,
+  getFileContent,
 } from "../drive/drive-service";
 import { formatContent } from "../markdown/markdown-service";
+import { answerFromContent } from "../anthropic/anthropic-service";
 
 export interface DecisionContext {
   intent: KBIntent;
@@ -47,6 +51,10 @@ export async function executeDecision(
         return await handleEditFile(intent, accessToken);
       case "APPEND_FILE":
         return await handleAppendFile(intent, accessToken);
+      case "READ_FILE":
+        return await handleReadFile(intent, accessToken);
+      case "QUERY":
+        return await handleQuery(intent, accessToken);
       default:
         return {
           success: false,
@@ -230,6 +238,144 @@ async function handleAppendFile(
     driveFileId: updated.id,
     driveUrl: updated.webViewLink ?? null,
     message: `Appended to "${targetName}" at ${path}.`,
+  };
+}
+
+async function handleReadFile(
+  intent: KBIntent,
+  accessToken: string
+): Promise<OperationResult> {
+  const root = await getRootFolder(accessToken);
+  const targetName = intent.targetDocument ?? intent.fileName;
+
+  // Find the file
+  let file = null;
+  let folderName = intent.folder ?? null;
+
+  if (intent.folder) {
+    const folder = await findFileByName(accessToken, intent.folder, root.id);
+    if (folder) {
+      file = targetName
+        ? await findFileByName(accessToken, targetName, folder.id)
+        : null;
+      // If no exact match, try fuzzy: list folder and find closest name
+      if (!file && targetName) {
+        const allFiles = await listFiles(accessToken, folder.id);
+        const lower = targetName.toLowerCase().replace(/\.md$/, "");
+        file =
+          allFiles.find((f) =>
+            f.name.toLowerCase().replace(/\.md$/, "").includes(lower)
+          ) ?? null;
+      }
+    }
+  } else if (targetName) {
+    file = await findFileByName(accessToken, targetName, root.id);
+  }
+
+  if (!file) {
+    const location = intent.folder ? `in ${intent.folder}/` : "in your KnowledgeBase";
+    return {
+      success: false,
+      action: "READ_FILE",
+      path: null,
+      driveFileId: null,
+      driveUrl: null,
+      message: `I couldn't find "${targetName ?? "that file"}" ${location}. Would you like me to create it?`,
+    };
+  }
+
+  const content = await getFileContent(accessToken, file.id);
+  const answer = await answerFromContent(
+    intent.reasoningSummary || `Show me the contents of ${file.name}`,
+    [{ name: file.name, content }]
+  );
+
+  const path = folderName
+    ? `KnowledgeBase/${folderName}/${file.name}`
+    : `KnowledgeBase/${file.name}`;
+
+  return {
+    success: true,
+    action: "READ_FILE",
+    path,
+    driveFileId: file.id,
+    driveUrl: file.webViewLink ?? null,
+    message: answer,
+  };
+}
+
+async function handleQuery(
+  intent: KBIntent,
+  accessToken: string
+): Promise<OperationResult> {
+  const root = await getRootFolder(accessToken);
+
+  // List files in the target folder (or root if no folder specified)
+  let parentId = root.id;
+  let folderLabel = "KnowledgeBase";
+
+  if (intent.folder) {
+    const folder = await findFileByName(accessToken, intent.folder, root.id);
+    if (folder) {
+      parentId = folder.id;
+      folderLabel = intent.folder;
+    }
+  }
+
+  const files = await listFiles(accessToken, parentId);
+  const mdFiles = files.filter(
+    (f) => f.mimeType !== "application/vnd.google-apps.folder"
+  );
+
+  if (mdFiles.length === 0) {
+    return {
+      success: true,
+      action: "QUERY",
+      path: `KnowledgeBase/${intent.folder ?? ""}`,
+      driveFileId: null,
+      driveUrl: null,
+      message: `You don't have any files in ${folderLabel} yet.`,
+    };
+  }
+
+  // For simple "what do I have" queries, just list names
+  const question = intent.reasoningSummary ?? "What files are here?";
+  const isSimpleListing =
+    !question.match(/how|what.*ingredient|what.*step|recipe for|show me|read/i);
+
+  if (isSimpleListing) {
+    const names = mdFiles
+      .map((f) => f.name.replace(/\.md$/, "").replace(/-/g, " "))
+      .join(", ");
+    const count = mdFiles.length;
+    return {
+      success: true,
+      action: "QUERY",
+      path: `KnowledgeBase/${intent.folder ?? ""}`,
+      driveFileId: null,
+      driveUrl: null,
+      message: `You have ${count} ${intent.folder ?? "item"}${count !== 1 ? "s" : ""}: ${names}.`,
+    };
+  }
+
+  // For richer queries, read up to 5 files and answer with Claude
+  const toRead = mdFiles.slice(0, 5);
+  const fileContents = await Promise.all(
+    toRead.map(async (f) => ({
+      name: f.name,
+      content: await getFileContent(accessToken, f.id),
+    }))
+  );
+
+  const answer = await answerFromContent(question, fileContents);
+
+  return {
+    success: true,
+    action: "QUERY",
+    path: `KnowledgeBase/${intent.folder ?? ""}`,
+    driveFileId: null,
+    driveUrl: null,
+    message: answer,
   };
 }
 
