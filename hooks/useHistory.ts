@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { makeTitle } from "@/lib/drive/conversation-store";
+import { makeTitle } from "@/lib/utils/make-title";
 
 export interface ConversationEntry {
   id: string;
