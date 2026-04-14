@@ -27,12 +27,37 @@ const formattedBuild = BUILD_TIME
   : null;
 
 type InputTab = "voice" | "text";
+type DeployState = "ready" | "building" | "error";
+
+const deployDot: Record<DeployState, { color: string; title: string }> = {
+  ready:    { color: "bg-green-500",  title: "Deployment succeeded" },
+  building: { color: "bg-yellow-400", title: "Deploying…" },
+  error:    { color: "bg-red-500",    title: "Deployment failed" },
+};
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<InputTab>("voice");
   const [activityKey, setActivityKey] = useState(0);
   const [godMode, setGodMode] = useState<{ active: boolean; initialMessage: string }>({ active: false, initialMessage: "" });
+  const [deployState, setDeployState] = useState<DeployState>("ready");
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    function poll() {
+      fetch("/api/deploy-status")
+        .then((r) => r.json())
+        .then((d: { state?: DeployState }) => {
+          const s = d.state ?? "ready";
+          setDeployState(s);
+          // Keep polling while building
+          if (s === "building") timer = setTimeout(poll, 15000);
+        })
+        .catch(() => {});
+    }
+    poll();
+    return () => clearTimeout(timer);
+  }, []);
 
   const {
     kbStatus,
@@ -133,8 +158,12 @@ export default function Home() {
               {formattedBuild && (
                 <Link
                   href="/patches"
-                  className="text-xs text-text-muted hover:text-accent transition-colors leading-tight"
+                  className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors leading-tight"
                 >
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full shrink-0 ${deployDot[deployState].color} ${deployState === "building" ? "animate-pulse" : ""}`}
+                    title={deployDot[deployState].title}
+                  />
                   Deployed {formattedBuild}
                 </Link>
               )}
