@@ -7,6 +7,18 @@ function getDriveClient(accessToken: string) {
   return google.drive({ version: "v3", auth });
 }
 
+export async function getFolderById(
+  accessToken: string,
+  folderId: string
+): Promise<DriveFile> {
+  const drive = getDriveClient(accessToken);
+  const response = await drive.files.get({
+    fileId: folderId,
+    fields: "id, name, mimeType, parents, webViewLink",
+  });
+  return response.data as DriveFile;
+}
+
 export async function listFiles(
   accessToken: string,
   parentId: string

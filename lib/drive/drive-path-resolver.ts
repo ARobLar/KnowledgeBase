@@ -2,38 +2,24 @@ import {
   findFileByName,
   createFolder,
   listFiles,
+  getFolderById,
 } from "./drive-service";
 import { DriveFile } from "@/types";
 
-const KB_ROOT = process.env.KB_ROOT_FOLDER ?? "KnowledgeBase";
-
-const DEFAULT_SUBFOLDERS = [
-  "recipes",
-  "identity",
-  "ideas",
-  "projects",
-  "research",
-  "personal",
-  "business",
-  "content",
-  "health-protocols",
-];
+const KB_ROOT_FOLDER_ID = process.env.KB_DRIVE_FOLDER_ID;
+const KB_ROOT_NAME = process.env.KB_ROOT_FOLDER ?? "KnowledgeBase";
 
 export async function getRootFolder(accessToken: string): Promise<DriveFile> {
-  const existing = await findFileByName(accessToken, KB_ROOT);
+  // If a specific folder ID is configured, use it directly (no search needed)
+  if (KB_ROOT_FOLDER_ID) {
+    return getFolderById(accessToken, KB_ROOT_FOLDER_ID);
+  }
+
+  // Fallback: search by name, create if missing
+  const existing = await findFileByName(accessToken, KB_ROOT_NAME);
   if (existing) return existing;
 
-  // Create root folder
-  const root = await createFolder(accessToken, KB_ROOT);
-
-  // Create default subfolders in parallel
-  await Promise.all(
-    DEFAULT_SUBFOLDERS.map((name) =>
-      createFolder(accessToken, name, root.id)
-    )
-  );
-
-  return root;
+  return createFolder(accessToken, KB_ROOT_NAME);
 }
 
 export async function getOrCreateSubfolder(
