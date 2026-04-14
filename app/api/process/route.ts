@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { cookies } from "next/headers";
 import { processKBRequest } from "@/lib/kb/kb-operation-service";
 import { ProcessRequest, ProcessResponse } from "@/types";
 import type { Session } from "next-auth";
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const githubToken = req.headers.get("x-github-token") ?? undefined;
+  const cookieStore = await cookies();
+  const githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
 
   try {
     const result: ProcessResponse = await processKBRequest(

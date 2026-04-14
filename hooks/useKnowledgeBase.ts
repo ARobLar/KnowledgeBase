@@ -64,13 +64,9 @@ export function useKnowledgeBase(): KBState & KBActions {
       }));
 
       try {
-        const ghToken = localStorage.getItem("kb_github_token");
         const response = await fetch("/api/process", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(ghToken ? { "x-github-token": ghToken } : {}),
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, inputType }),
         });
 
@@ -147,13 +143,9 @@ export function useKnowledgeBase(): KBState & KBActions {
     setState((prev) => ({ ...prev, status: "executing" }));
 
     try {
-      const ghToken = localStorage.getItem("kb_github_token");
       const response = await fetch("/api/process", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(ghToken ? { "x-github-token": ghToken } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: pendingMeta.text,
           inputType: pendingMeta.inputType,

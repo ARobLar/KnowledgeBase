@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Session } from "next-auth";
 import {
@@ -180,7 +181,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const githubToken = req.headers.get("x-github-token") ?? undefined;
+  const cookieStore = await cookies();
+  const githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
   const { message, history = [] } = await req.json() as { message: string; history: ChatMessage[] };
 
   // Build message history for Claude

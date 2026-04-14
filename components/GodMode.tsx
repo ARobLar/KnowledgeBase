@@ -33,7 +33,6 @@ export function GodMode({ initialMessage, onExit }: GodModeProps) {
   }, []);
 
   async function sendMessage(text: string, currentHistory: ChatMessage[]) {
-    const ghToken = localStorage.getItem("kb_github_token");
     const userMsg: ChatMessage = { role: "user", content: text };
     const newHistory = [...currentHistory, userMsg];
     setHistory(newHistory);
@@ -43,10 +42,7 @@ export function GodMode({ initialMessage, onExit }: GodModeProps) {
     try {
       const res = await fetch("/api/god", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(ghToken ? { "x-github-token": ghToken } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history: currentHistory }),
       });
 
