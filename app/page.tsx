@@ -14,6 +14,7 @@ import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
 import { useTTS } from "@/hooks/useTTS";
 import { useHistory } from "@/hooks/useHistory";
 import { GodMode } from "@/components/GodMode";
+import { DevMode } from "@/components/DevMode";
 import { GitHubButton } from "@/components/GitHubButton";
 import type { ConversationEntry } from "@/hooks/useHistory";
 
@@ -40,6 +41,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<InputTab>("voice");
   const [activityKey, setActivityKey] = useState(0);
   const [godMode, setGodMode] = useState<{ active: boolean; initialMessage: string }>({ active: false, initialMessage: "" });
+  const [devMode, setDevMode] = useState<{ active: boolean; initialMessage: string }>({ active: false, initialMessage: "" });
   const [deployState, setDeployState] = useState<DeployState>("ready");
 
   useEffect(() => {
@@ -122,8 +124,10 @@ export default function Home() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const isGodMode = trimmed.toLowerCase().startsWith("god mode");
-    const inputType = isGodMode ? "god" : activeTab;
+    const lower = trimmed.toLowerCase();
+    const isGodMode = lower.startsWith("god mode");
+    const isDevMode = lower.startsWith("dev mode");
+    const inputType = isGodMode ? "god" : isDevMode ? "god" : activeTab;
 
     // Save message BEFORE processing — so it's never lost
     const histId = saveMessage(trimmed, inputType);
@@ -134,12 +138,20 @@ export default function Home() {
       return;
     }
 
+    if (isDevMode) {
+      setDevMode({ active: true, initialMessage: trimmed });
+      return;
+    }
+
     await processInput(trimmed, activeTab);
     setActivityKey((k) => k + 1);
   }
 
   function handleRerun(entry: ConversationEntry) {
-    if (entry.inputType === "god") {
+    const lower = entry.rawInput.toLowerCase();
+    if (lower.startsWith("dev mode")) {
+      setDevMode({ active: true, initialMessage: entry.rawInput });
+    } else if (entry.inputType === "god" || lower.startsWith("god mode")) {
       setGodMode({ active: true, initialMessage: entry.rawInput });
     } else {
       handleSubmit(entry.rawInput);
@@ -170,6 +182,18 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {isAuthenticated && (
+              <Link
+                href="/settings"
+                className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+                title="Settings"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </Link>
+            )}
             {isAuthenticated && <GitHubButton />}
             <AuthButton />
           </div>
@@ -200,8 +224,16 @@ export default function Home() {
           />
         )}
 
+        {/* Dev Mode */}
+        {isAuthenticated && devMode.active && (
+          <DevMode
+            initialMessage={devMode.initialMessage}
+            onExit={() => setDevMode({ active: false, initialMessage: "" })}
+          />
+        )}
+
         {/* Input area */}
-        {isAuthenticated && !godMode.active && (
+        {isAuthenticated && !godMode.active && !devMode.active && (
           <div className="rounded-2xl bg-surface border border-surface-3 overflow-hidden">
             <div className="flex border-b border-surface-3">
               {(["voice", "text"] as InputTab[]).map((tab) => (
@@ -237,7 +269,7 @@ export default function Home() {
         )}
 
         {/* Processing indicator */}
-        {isProcessing && (
+        {isProcessing && !godMode.active && !devMode.active && (
           <div className="flex items-center justify-center gap-3 py-4 text-text-muted text-sm">
             <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
             {kbStatus === "processing" ? "Interpreting your request..." : "Executing operation..."}
@@ -245,7 +277,7 @@ export default function Home() {
         )}
 
         {/* Interpretation card */}
-        {showResult && currentIntent && (
+        {showResult && currentIntent && !godMode.active && !devMode.active && (
           <div>
             <InterpretationCard
               intent={currentIntent}

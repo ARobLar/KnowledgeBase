@@ -38,6 +38,11 @@ interface KBConfig {
   githubToken?: string;
   githubLogin?: string;
   githubName?: string;
+  activeRepo?: {
+    fullName: string;
+    private: boolean;
+    htmlUrl: string;
+  };
 }
 
 async function readConfig(accessToken: string): Promise<KBConfig> {
@@ -85,4 +90,24 @@ export async function deleteGitHubToken(accessToken: string): Promise<void> {
   const existing = await readConfig(accessToken);
   const { githubToken: _, githubLogin: __, githubName: ___, ...rest } = existing;
   await writeConfig(accessToken, rest);
+}
+
+export async function setActiveRepo(
+  accessToken: string,
+  repo: { fullName: string; private: boolean; htmlUrl: string } | null
+): Promise<void> {
+  const existing = await readConfig(accessToken);
+  if (repo === null) {
+    const { activeRepo: _, ...rest } = existing;
+    await writeConfig(accessToken, rest);
+  } else {
+    await writeConfig(accessToken, { ...existing, activeRepo: repo });
+  }
+}
+
+export async function getActiveRepo(
+  accessToken: string
+): Promise<{ fullName: string; private: boolean; htmlUrl: string } | null> {
+  const config = await readConfig(accessToken);
+  return config.activeRepo ?? null;
 }
