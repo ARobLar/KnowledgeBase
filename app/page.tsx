@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { AuthButton } from "@/components/AuthButton";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
@@ -9,6 +9,7 @@ import { InterpretationCard } from "@/components/InterpretationCard";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
+import { useTTS } from "@/hooks/useTTS";
 
 type InputTab = "voice" | "text";
 
@@ -29,6 +30,31 @@ export default function Home() {
     cancelOperation,
     reset,
   } = useKBAdapter();
+
+  const { speak, stop } = useTTS();
+  const spokenMessageRef = useRef<string | null>(null);
+
+  // Speak the response message when a result arrives
+  useEffect(() => {
+    const shouldSpeak =
+      activeTab === "voice" &&
+      message &&
+      message !== spokenMessageRef.current &&
+      (kbStatus === "success" || kbStatus === "error" || kbStatus === "clarification_needed");
+
+    if (shouldSpeak) {
+      spokenMessageRef.current = message;
+      speak(message);
+    }
+  }, [kbStatus, message, activeTab, speak]);
+
+  // Stop speaking when user resets
+  useEffect(() => {
+    if (kbStatus === "idle") {
+      stop();
+      spokenMessageRef.current = null;
+    }
+  }, [kbStatus, stop]);
 
   const isAuthenticated = !!session?.user;
   const isProcessing = kbStatus === "processing" || kbStatus === "executing";
