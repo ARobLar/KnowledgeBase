@@ -9,10 +9,13 @@ import { TextInput } from "@/components/TextInput";
 import { InterpretationCard } from "@/components/InterpretationCard";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { ConversationHistory } from "@/components/ConversationHistory";
 import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
 import { useTTS } from "@/hooks/useTTS";
+import { useHistory } from "@/hooks/useHistory";
 import { GodMode } from "@/components/GodMode";
 import { GitHubButton } from "@/components/GitHubButton";
+import type { ConversationEntry } from "@/hooks/useHistory";
 
 const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME;
 const formattedBuild = BUILD_TIME
@@ -45,22 +48,35 @@ export default function Home() {
   } = useKBAdapter();
 
   const { isEnabled: ttsEnabled, isSupported: ttsSupported, selectedVoiceId, toggle: toggleTTS, selectVoice, speak, stop } = useTTS();
+  const { entries: historyEntries, loading: historyLoading, saveMessage, updateEntry, remove: removeEntry } = useHistory();
   const spokenMessageRef = useRef<string | null>(null);
+  const pendingHistoryId = useRef<string | null>(null);
 
-  // Speak the response message when a result arrives
+  // Speak response when result arrives
   useEffect(() => {
     const shouldSpeak =
       message &&
       message !== spokenMessageRef.current &&
       (kbStatus === "success" || kbStatus === "error" || kbStatus === "clarification_needed");
-
     if (shouldSpeak) {
       spokenMessageRef.current = message;
       speak(message);
     }
   }, [kbStatus, message, speak]);
 
-  // Stop speaking when user resets
+  // Update history entry when result arrives
+  useEffect(() => {
+    if (!pendingHistoryId.current) return;
+    if (kbStatus === "success" && message) {
+      updateEntry(pendingHistoryId.current, "success", message);
+      pendingHistoryId.current = null;
+    } else if (kbStatus === "error") {
+      updateEntry(pendingHistoryId.current, "error", message ?? error ?? "Error");
+      pendingHistoryId.current = null;
+    }
+  }, [kbStatus, message, error, updateEntry]);
+
+  // Stop TTS on reset
   useEffect(() => {
     if (kbStatus === "idle") {
       stop();
@@ -78,13 +94,31 @@ export default function Home() {
       kbStatus === "clarification_needed");
 
   async function handleSubmit(text: string) {
-    if (text.trim().toLowerCase().startsWith("god mode")) {
-      setGodMode({ active: true, initialMessage: text });
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const isGodMode = trimmed.toLowerCase().startsWith("god mode");
+    const inputType = isGodMode ? "god" : activeTab;
+
+    // Save message BEFORE processing — so it's never lost
+    const histId = saveMessage(trimmed, inputType);
+    pendingHistoryId.current = histId;
+
+    if (isGodMode) {
+      setGodMode({ active: true, initialMessage: trimmed });
       return;
     }
-    const inputType = activeTab;
-    await processInput(text, inputType);
+
+    await processInput(trimmed, activeTab);
     setActivityKey((k) => k + 1);
+  }
+
+  function handleRerun(entry: ConversationEntry) {
+    if (entry.inputType === "god") {
+      setGodMode({ active: true, initialMessage: entry.rawInput });
+    } else {
+      handleSubmit(entry.rawInput);
+    }
   }
 
   return (
@@ -119,9 +153,7 @@ export default function Home() {
         {!isAuthenticated && status !== "loading" && (
           <div className="rounded-2xl bg-surface border border-surface-3 p-6 text-center">
             <div className="text-4xl mb-3">🔐</div>
-            <h2 className="text-base font-semibold text-text mb-2">
-              Sign in to get started
-            </h2>
+            <h2 className="text-base font-semibold text-text mb-2">Sign in to get started</h2>
             <p className="text-sm text-text-muted mb-4">
               Connect your Google account to save knowledge to your Drive.
             </p>
@@ -139,10 +171,9 @@ export default function Home() {
           />
         )}
 
-        {/* Input area (only when authenticated) */}
+        {/* Input area */}
         {isAuthenticated && !godMode.active && (
           <div className="rounded-2xl bg-surface border border-surface-3 overflow-hidden">
-            {/* Tab switcher */}
             <div className="flex border-b border-surface-3">
               {(["voice", "text"] as InputTab[]).map((tab) => (
                 <button
@@ -158,8 +189,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-
-            {/* Tab content */}
             <div className="p-5">
               {activeTab === "voice" ? (
                 <VoiceRecorder
@@ -172,10 +201,7 @@ export default function Home() {
                   onSelectVoice={selectVoice}
                 />
               ) : (
-                <TextInput
-                  onSubmit={handleSubmit}
-                  disabled={isProcessing}
-                />
+                <TextInput onSubmit={handleSubmit} disabled={isProcessing} />
               )}
             </div>
           </div>
@@ -212,6 +238,16 @@ export default function Home() {
           </div>
         )}
 
+        {/* Conversation history */}
+        {isAuthenticated && (
+          <ConversationHistory
+            entries={historyEntries}
+            loading={historyLoading}
+            onRerun={handleRerun}
+            onDelete={removeEntry}
+          />
+        )}
+
         {/* Activity feed */}
         {isAuthenticated && (
           <div className="rounded-2xl bg-surface border border-surface-3 p-4">
@@ -233,7 +269,6 @@ export default function Home() {
   );
 }
 
-// Adapter to alias status field name (avoid collision with next-auth status)
 function useKBAdapter() {
   const kb = useKnowledgeBase();
   return {
