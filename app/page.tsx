@@ -11,6 +11,7 @@ import { ActivityFeed } from "@/components/ActivityFeed";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
 import { useTTS } from "@/hooks/useTTS";
+import { GodMode } from "@/components/GodMode";
 
 const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME;
 const formattedBuild = BUILD_TIME
@@ -27,6 +28,7 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<InputTab>("voice");
   const [activityKey, setActivityKey] = useState(0);
+  const [godMode, setGodMode] = useState<{ active: boolean; initialMessage: string }>({ active: false, initialMessage: "" });
 
   const {
     kbStatus,
@@ -41,7 +43,7 @@ export default function Home() {
     reset,
   } = useKBAdapter();
 
-  const { isEnabled: ttsEnabled, isSupported: ttsSupported, toggle: toggleTTS, speak, stop } = useTTS();
+  const { isEnabled: ttsEnabled, isSupported: ttsSupported, selectedVoiceId, toggle: toggleTTS, selectVoice, speak, stop } = useTTS();
   const spokenMessageRef = useRef<string | null>(null);
 
   // Speak the response message when a result arrives
@@ -75,6 +77,10 @@ export default function Home() {
       kbStatus === "clarification_needed");
 
   async function handleSubmit(text: string) {
+    if (text.trim().toLowerCase().startsWith("god mode")) {
+      setGodMode({ active: true, initialMessage: text });
+      return;
+    }
     const inputType = activeTab;
     await processInput(text, inputType);
     setActivityKey((k) => k + 1);
@@ -129,8 +135,16 @@ export default function Home() {
           </div>
         )}
 
+        {/* God Mode */}
+        {isAuthenticated && godMode.active && (
+          <GodMode
+            initialMessage={godMode.initialMessage}
+            onExit={() => setGodMode({ active: false, initialMessage: "" })}
+          />
+        )}
+
         {/* Input area (only when authenticated) */}
-        {isAuthenticated && (
+        {isAuthenticated && !godMode.active && (
           <div className="rounded-2xl bg-surface border border-surface-3 overflow-hidden">
             {/* Tab switcher */}
             <div className="flex border-b border-surface-3">
@@ -157,7 +171,9 @@ export default function Home() {
                   disabled={isProcessing}
                   ttsEnabled={ttsEnabled}
                   ttsSupported={ttsSupported}
+                  selectedVoiceId={selectedVoiceId}
                   onToggleTTS={toggleTTS}
+                  onSelectVoice={selectVoice}
                 />
               ) : (
                 <TextInput

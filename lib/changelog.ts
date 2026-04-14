@@ -7,6 +7,21 @@ export interface PatchEntry {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: "1.5.0",
+    date: "2026-04-14",
+    title: "God Mode, GitHub integration & voice selection",
+    changes: [
+      "God Mode: start any message with 'god mode' to unlock full agent capabilities",
+      "God Mode has a full conversation UI — agent replies, takes actions, and asks questions",
+      "Agent never idles: continues parallel work while waiting for your reply",
+      "Destructive actions (deletes) always require explicit confirmation",
+      "GitHub integration: connect your PAT in Settings → create repos, push files, create branches",
+      "Voice selector in TTS toggle: choose from all available system voices",
+      "Origin (default system voice) preserved; best available neural voice listed first",
+      "Settings page accessible via gear icon in header",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-04-14",
     title: "Versioning & patch notes",

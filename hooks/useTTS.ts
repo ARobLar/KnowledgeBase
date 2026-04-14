@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "kb_tts_enabled";
+const VOICE_KEY = "kb_tts_voice_id";
 
 export function useTTS() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>("origin");
 
   useEffect(() => {
     setIsSupported(
@@ -15,6 +17,8 @@ export function useTTS() {
     );
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "true") setIsEnabled(true);
+    const storedVoice = localStorage.getItem(VOICE_KEY);
+    if (storedVoice) setSelectedVoiceId(storedVoice);
   }, []);
 
   // Speak a short silent utterance to unlock the engine (must be called from a user gesture)
@@ -48,6 +52,11 @@ export function useTTS() {
     }
   }, [isEnabled, enable, disable]);
 
+  const selectVoice = useCallback((id: string) => {
+    setSelectedVoiceId(id);
+    localStorage.setItem(VOICE_KEY, id);
+  }, []);
+
   const speak = useCallback(
     (text: string) => {
       if (!isEnabled || !isSupported) return;
@@ -55,7 +64,6 @@ export function useTTS() {
 
       window.speechSynthesis.cancel();
 
-      // If synthesis is paused (common Chrome bug), resume first
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
@@ -63,14 +71,22 @@ export function useTTS() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.05;
       utterance.pitch = 1;
+
+      // Apply selected voice if not "origin"
+      if (selectedVoiceId !== "origin") {
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find((v) => v.name === selectedVoiceId);
+        if (match) utterance.voice = match;
+      }
+
       window.speechSynthesis.speak(utterance);
     },
-    [isEnabled, isSupported]
+    [isEnabled, isSupported, selectedVoiceId]
   );
 
   const stop = useCallback(() => {
     window.speechSynthesis?.cancel();
   }, []);
 
-  return { isEnabled, isSupported, isUnlocked, toggle, speak, stop };
+  return { isEnabled, isSupported, isUnlocked, selectedVoiceId, toggle, selectVoice, speak, stop };
 }
