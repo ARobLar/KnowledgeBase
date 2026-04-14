@@ -41,13 +41,12 @@ export default function Home() {
     reset,
   } = useKBAdapter();
 
-  const { speak, stop } = useTTS();
+  const { isEnabled: ttsEnabled, isSupported: ttsSupported, toggle: toggleTTS, speak, stop } = useTTS();
   const spokenMessageRef = useRef<string | null>(null);
 
   // Speak the response message when a result arrives
   useEffect(() => {
     const shouldSpeak =
-      activeTab === "voice" &&
       message &&
       message !== spokenMessageRef.current &&
       (kbStatus === "success" || kbStatus === "error" || kbStatus === "clarification_needed");
@@ -56,7 +55,7 @@ export default function Home() {
       spokenMessageRef.current = message;
       speak(message);
     }
-  }, [kbStatus, message, activeTab, speak]);
+  }, [kbStatus, message, speak]);
 
   // Stop speaking when user resets
   useEffect(() => {
@@ -148,6 +147,9 @@ export default function Home() {
                 <VoiceRecorder
                   onSubmit={handleSubmit}
                   disabled={isProcessing}
+                  ttsEnabled={ttsEnabled}
+                  ttsSupported={ttsSupported}
+                  onToggleTTS={toggleTTS}
                 />
               ) : (
                 <TextInput
