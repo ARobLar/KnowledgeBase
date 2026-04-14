@@ -7,6 +7,19 @@ export interface PatchEntry {
 
 export const CHANGELOG: PatchEntry[] = [
   {
+    version: "1.6.0",
+    date: "2026-04-14",
+    title: "Conversation history",
+    changes: [
+      "Every message is saved to your Drive before processing — nothing is ever lost to errors",
+      "History cards show input type icon, truncated title, status pill, and relative time",
+      "Expand any card to see your full original message and the agent's response",
+      "Re-run button lets you replay any previous message with one tap",
+      "Inline delete with confirmation — no accidental removals",
+      "History is user-specific and persists across devices via Google Drive",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-04-14",
     title: "God Mode, GitHub integration & voice selection",
