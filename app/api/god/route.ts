@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
+import { loadGitHubToken } from "@/lib/crypto/token-store";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Session } from "next-auth";
 import {
@@ -182,7 +183,13 @@ export async function POST(req: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  const githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
+  let githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
+  if (!githubToken && session.accessToken) {
+    try {
+      const stored = await loadGitHubToken(session.accessToken);
+      if (stored) githubToken = stored.token;
+    } catch { /* best-effort */ }
+  }
   const { message, history = [] } = await req.json() as { message: string; history: ChatMessage[] };
 
   // Build message history for Claude

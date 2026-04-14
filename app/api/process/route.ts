@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
 import { processKBRequest } from "@/lib/kb/kb-operation-service";
+import { loadGitHubToken } from "@/lib/crypto/token-store";
 import { ProcessRequest, ProcessResponse } from "@/types";
 import type { Session } from "next-auth";
 
@@ -36,7 +37,14 @@ export async function POST(req: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  const githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
+  let githubToken = cookieStore.get("kb_gh_token")?.value ?? undefined;
+  // Fall back to Drive-stored token (cross-device)
+  if (!githubToken) {
+    try {
+      const stored = await loadGitHubToken(session.accessToken);
+      if (stored) githubToken = stored.token;
+    } catch { /* best-effort */ }
+  }
 
   try {
     const result: ProcessResponse = await processKBRequest(
