@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 30; // cache for 30s
+// No route-level cache — status must always be fresh
+export const dynamic = "force-dynamic";
 
 type DeployState = "ready" | "building" | "error";
 
@@ -15,7 +16,7 @@ export async function GET() {
   try {
     const res = await fetch(
       `https://api.vercel.com/v6/deployments?app=${encodeURIComponent(projectName)}&limit=1`,
-      { headers: { Authorization: `Bearer ${token}` }, next: { revalidate: 30 } }
+      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
     );
     if (!res.ok) return NextResponse.json({ state: "ready" as DeployState });
 

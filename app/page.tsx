@@ -46,19 +46,35 @@ export default function Home() {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
+
     function poll() {
       fetch("/api/deploy-status")
         .then((r) => r.json())
         .then((d: { state?: DeployState }) => {
           const s = d.state ?? "ready";
           setDeployState(s);
-          // Keep polling while building
-          if (s === "building") timer = setTimeout(poll, 15000);
+          // Poll faster while a build is in progress, slower otherwise
+          timer = setTimeout(poll, s === "building" ? 5000 : 10000);
         })
-        .catch(() => {});
+        .catch(() => {
+          timer = setTimeout(poll, 10000);
+        });
     }
+
+    // Re-check immediately when the tab becomes visible
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        clearTimeout(timer);
+        poll();
+      }
+    }
+
     poll();
-    return () => clearTimeout(timer);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const {
