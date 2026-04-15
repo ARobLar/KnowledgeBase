@@ -185,11 +185,19 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort */ }
   }
 
-  const { message, history = [], activeRepo } = await req.json() as {
+  const { message, history = [], activeRepo: clientRepo } = await req.json() as {
     message: string;
     history: ChatMessage[];
     activeRepo?: { fullName: string; private: boolean; htmlUrl: string } | null;
   };
+
+  // If client didn't send a repo (e.g. race condition on mount), fall back to Drive
+  let activeRepo = clientRepo ?? null;
+  if (!activeRepo) {
+    try {
+      activeRepo = await getActiveRepo(session.accessToken);
+    } catch { /* best-effort */ }
+  }
 
   // Build context about active repo
   const repoContext = activeRepo

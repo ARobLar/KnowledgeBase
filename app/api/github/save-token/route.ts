@@ -22,14 +22,18 @@ export async function POST(req: NextRequest) {
   let user: { login: string; name: string };
   try {
     user = await getAuthenticatedUser(token.trim());
-  } catch {
-    return NextResponse.json({ error: "Invalid token — could not authenticate with GitHub" }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Invalid token — could not authenticate with GitHub" }, { status: 400 });
   }
 
-  // Persist to Drive (encrypted)
-  await storeGitHubToken(session.accessToken, token.trim(), user.login, user.name ?? user.login);
+  // Persist to Drive (encrypted) — best-effort; cookie is the fast path
+  try {
+    await storeGitHubToken(session.accessToken, token.trim(), user.login, user.name ?? user.login);
+  } catch {
+    // Drive write failed (e.g. expired Google session) — cookie still works for this session
+  }
 
-  // Set fast-path cookies
+  // Set fast-path cookies regardless of whether Drive write succeeded
   const cookieStore = await cookies();
   cookieStore.set("kb_gh_token", token.trim(), {
     httpOnly: true,

@@ -31,24 +31,24 @@ export function DevMode({ initialMessage, onExit, onRepoChange }: DevModeProps) 
   const scrollRef = useRef<HTMLDivElement>(null);
   const { speak, isEnabled: ttsEnabled } = useTTS();
 
-  // Load active repo on mount
-  useEffect(() => {
-    fetch("/api/github/active-repo")
-      .then((r) => r.json())
-      .then((d: { repo?: ActiveRepo }) => {
-        if (d.repo) setActiveRepo(d.repo);
-      })
-      .catch(() => {});
-  }, []);
-
   // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [history, actionLog, isWorking]);
 
-  // Send initial message on mount
+  // Load active repo then send initial message — must be sequential so the
+  // agent receives the correct repo context on the very first turn
   useEffect(() => {
-    sendMessage(initialMessage, [], activeRepo);
+    fetch("/api/github/active-repo")
+      .then((r) => r.json())
+      .then((d: { repo?: ActiveRepo }) => {
+        const repo = d.repo ?? null;
+        if (repo) setActiveRepo(repo);
+        sendMessage(initialMessage, [], repo);
+      })
+      .catch(() => {
+        sendMessage(initialMessage, [], null);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

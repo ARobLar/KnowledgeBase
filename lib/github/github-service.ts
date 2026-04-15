@@ -30,7 +30,10 @@ export interface GHFile {
 
 export async function getAuthenticatedUser(token: string): Promise<{ login: string; name: string }> {
   const res = await fetch(`${BASE}/user`, { headers: headers(token) });
-  if (!res.ok) throw new Error(`GitHub auth failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(body.message ?? `GitHub auth failed: ${res.status}`);
+  }
   return res.json();
 }
 
